@@ -74,4 +74,3 @@ class Notifier(commands.Cog):
         await self.bot.wait_until_ready()
 
         channel = self.bot.get_channel(DISCORD_CHANNEL_ID)
-        await channel.send("🔔 Notifier is now active! I will notify you about upcoming events.")
