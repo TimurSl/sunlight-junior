@@ -6,13 +6,12 @@ from googleapiclient.discovery import build
 import os
 from dotenv import load_dotenv
 
-import pwd
-
+from useful import get_pwd
 load_dotenv()
 
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
-SERVICE_ACCOUNT_FILE = os.path.join(pwd.get_pwd(), "service_account.json")
+SERVICE_ACCOUNT_FILE = os.path.join(get_pwd(), "service_account.json")
 CALENDAR_ID = os.getenv("CALENDAR_ID")
 
 # Авторизация

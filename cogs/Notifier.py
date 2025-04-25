@@ -31,49 +31,43 @@ class Notifier(commands.Cog):
             start_time = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
             unix_timestamp = int(start_time.timestamp())
 
-            for label, delta in [('24h', timedelta(hours=24)), ('3h', timedelta(hours=3)), ('now', timedelta(0))]:
+            now = datetime.now(timezone.utc)
+            notification_deltas = [
+                ('24h', timedelta(hours=24)),
+                ('3h', timedelta(hours=3)),
+                ('1h', timedelta(hours=1)),
+                ('now', timedelta(seconds=30))
+            ]
+
+            for label, delta in notification_deltas:
                 notify_time = start_time - delta
                 unix_timestamp = int(start_time.timestamp())
-                key = event_id
+                key = f"{event_id}_{label}"
 
-                if now >= notify_time and key not in self.notified:
-                    embed_notification = discord.Embed(
-                        title=f"🔔 Upcoming Event: {summary}",
-                        description=f"{description}\n\nEvent starts at: <t:{unix_timestamp}:F>",
-                        color=discord.Color.blue()
-                    )
+                if abs((now - notify_time).total_seconds()) <= 60 and key not in self.notified:
+                    time_until = start_time - now
+
+                    if time_until.total_seconds() > 0:
+                        # Событие ещё впереди — пишем сколько осталось
+                        time_remaining_str = discord.utils.format_dt(start_time, style='R')  # <t:...:R>
+                        status_msg = f"⏳ Starts {time_remaining_str}"
+                        embed_notification = discord.Embed(
+                            title=f"🔔 Upcoming Event: {summary}",
+                            description=f"{description}\n\n🕒 Start time: <t:{unix_timestamp}:F>\n{status_msg}",
+                            color=discord.Color.blue()
+                        )
+                    else:
+                        # Событие уже началось
+                        status_msg = f"✅ Event has **started**"
+                        embed_notification = discord.Embed(
+                            title=f"🔔 Event Started: {summary}",
+                            description=f"{description}\n\n🕒 Start time: <t:{unix_timestamp}:F>\n{status_msg}",
+                            color=discord.Color.green()
+                        )
+
                     await channel.send("@here", embed=embed_notification)
                     self.notified.add(key)
                     break
-
-    @tasks.loop(minutes=1)
-    async def poll_changes_check(self):
-        changes = self.calendar.check_for_changes()
-
-        if changes:
-            channel = self.bot.get_channel(DISCORD_CHANNEL_ID)
-            for change_type, event in changes:
-                if change_type == 'new':
-                    embed_notification = discord.Embed(
-                        title=f"🔔 New Event: {event['summary']}",
-                        description=f"Event starts at: <t:{unix_time(event)}:F>",
-                        color=discord.Color.green()
-                    )
-                    await channel.send("@here", embed=embed_notification)
-                elif change_type == 'updated':
-                    embed_notification = discord.Embed(
-                        title=f"🔄 Updated Event: {event['summary']}",
-                        description=f"Event starts at: <t:{unix_time(event)}:F>",
-                        color=discord.Color.yellow()
-                    )
-                    await channel.send("@here", embed=embed_notification)
-                elif change_type == 'deleted':
-                    embed_notification = discord.Embed(
-                        title=f"❌ Deleted Event: {event['id']}",
-                        description="This event has been deleted.",
-                        color=discord.Color.red()
-                    )
-                    await channel.send("@here", embed=embed_notification)
 
     @check_calendar_events.before_loop
     async def before_loop(self):
