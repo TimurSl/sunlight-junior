@@ -2,7 +2,6 @@
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
-import threading
 
 from cogs.Notifier import Notifier
 from commands.useful.chat_cleaner import ChatCleaner
@@ -28,9 +27,15 @@ from commands.music.loadfav import LoadFav
 from commands.music.loadmix import LoadMix
 from commands.music.savemix import SaveMix
 from commands.music.removetrack import RemoveTrack
-
+from commands.music.forcejoin import ForceJoinCog
+from commands.music.forceleave import ForceLeaveCog
 
 from music.controller import MusicController
+
+from cogs.voice_rooms import VoiceRooms
+from cogs.stats import ServerStats
+from cogs.configure import Configurator
+
 
 
 load_dotenv()
@@ -71,6 +76,11 @@ class CustomBot(commands.Bot):
         await bot.add_cog(LoadMix(bot, controller))
         await bot.add_cog(SaveMix(bot, controller))
         await bot.add_cog(RemoveTrack(bot, controller))
+        await bot.add_cog(ForceJoinCog(bot, controller))
+        await bot.add_cog(ForceLeaveCog(bot, controller))
+        await bot.add_cog(VoiceRooms(bot))
+        await bot.add_cog(ServerStats(bot))
+        await bot.add_cog(Configurator(bot))
 
 
         print("Reloaded all modules & synced commands.")

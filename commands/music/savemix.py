@@ -17,7 +17,7 @@ class SaveMix(commands.Cog):
         self.bot = bot
         self.controller = controller
 
-    @app_commands.command(name="savemix", description="Save the current queue as a mix for this server")
+    @commands.hybrid_command(name="savemix", description="Save the current queue as a mix for this server")
     @is_music_user()
     async def savemix(self, interaction: discord.Interaction):
         if not interaction.response.is_done():

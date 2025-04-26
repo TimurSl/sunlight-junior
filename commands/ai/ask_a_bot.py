@@ -152,4 +152,3 @@ class AskAI(commands.Cog):
 
 
 
-

@@ -1,4 +1,6 @@
-﻿import discord
+﻿import asyncio
+
+import discord
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta, timezone
 import os
@@ -75,3 +77,5 @@ class Notifier(commands.Cog):
 
         channel = self.bot.get_channel(DISCORD_CHANNEL_ID)
         await channel.send("🔔 Notifier is now active! I will notify you about upcoming events.")
+        await asyncio.sleep(10)
+        await channel.purge(limit=1, check=lambda m: m.content.startswith("🔔 Notifier is now active!"))

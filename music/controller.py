@@ -32,6 +32,7 @@ class GuildMusic:
         self.loop_queue = False
         self.vc = None
         self.skip_flag = False
+        self.user_who_added_id = None # ID of the user who invited bot to voice
 
 
 class MusicController:
@@ -56,16 +57,19 @@ class MusicController:
             self.guilds[guild_id] = GuildMusic()
         return self.guilds[guild_id]
 
-    async def join(self, interaction: discord.Interaction):
+    async def join(self, interaction: discord.Interaction, force: bool = False):
         if not interaction.user.voice or not interaction.user.voice.channel:
             await interaction.followup.send("You're not in a voice channel.")
             return
-        await self.connect_if_not_connected(interaction)
+        await self.connect_if_not_connected(interaction, force=force)
 
-    async def leave(self, interaction: discord.Interaction):
+    async def leave(self, interaction: discord.Interaction, force: bool = False):
         guild = interaction.guild or interaction.user.guild
 
         guild_music = self.get_guild_music(guild.id)
+        if guild_music.user_who_added_id is not None and guild_music.user_who_added_id != interaction.user.id and not force:
+            await interaction.followup.send("You can't leave the voice channel because you didn't add the bot.")
+            return
         if guild_music.vc and guild_music.vc.is_connected():
             await guild_music.vc.disconnect()
             guild_music.vc = None
@@ -495,7 +499,7 @@ class MusicController:
 
         await interaction.followup.send("🎵 Choose a favorite to remove:", view=view, ephemeral=True)
 
-    async def connect_if_not_connected(self, interaction: discord.Interaction):
+    async def connect_if_not_connected(self, interaction: discord.Interaction, force: bool = False):
         guild_music = self.get_guild_music(interaction.guild.id)
         if not interaction.user.voice or not interaction.user.voice.channel:
             await interaction.followup.send("You're not in a voice channel.")
@@ -503,6 +507,7 @@ class MusicController:
         channel = interaction.user.voice.channel
         if not guild_music.vc or not guild_music.vc.is_connected():
             guild_music.vc = await channel.connect()
+            guild_music.user_who_added_id = interaction.user.id
 
             # 💥 Тут после подключения - проверка на наличие микса
             mix_path = os.path.join(MIXES_DIR, f"{interaction.guild.id}.json")
@@ -511,6 +516,16 @@ class MusicController:
                 view = LoadMixPromptView(self, interaction)
                 await interaction.followup.send("🎵 Found a saved mix for this server. Load it?", view=view,
                                                 ephemeral=True)
+        else:
+            if force:
+                await guild_music.vc.move_to(channel)
+                await interaction.followup.send(f"✅ Moved to {channel.name}.")
+                guild_music.user_who_added_id = interaction.user.id
+            elif guild_music.vc.channel == channel:
+                print("Already connected to the same channel.")
+            else:
+                await interaction.followup.send("❌ Bot is already connected to another voice channel. Use /forcejoin (music user only) to reconnect it.", ephemeral=True)
+                return
 
     async def nowplaying(self, interaction: discord.Interaction):
         guild_music = self.get_guild_music(interaction.guild.id)
