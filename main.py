@@ -28,6 +28,7 @@ from commands.music.skipto import SkipTo
 from commands.music.loadfav import LoadFav
 from commands.music.loadmix import LoadMix
 from commands.music.savemix import SaveMix
+from commands.music.removetrack import RemoveTrack
 
 
 from music.controller import MusicController
@@ -71,6 +72,7 @@ class CustomBot(commands.Bot):
         await bot.add_cog(LoadFav(bot, controller))
         await bot.add_cog(LoadMix(bot, controller))
         await bot.add_cog(SaveMix(bot, controller))
+        await bot.add_cog(RemoveTrack(bot, controller))
 
 
         print("Reloaded all modules & synced commands.")

@@ -20,3 +20,12 @@ def is_ai_user():
             return True
         return AI_USER_ROLE_ID in [r.id for r in ctx.author.roles]
     return commands.check(predicate)
+
+MUSIC_USER_ROLE_ID = int(os.getenv("DISCORD_MUSIC_ROLE_ID"))
+
+def is_music_user():
+    async def predicate(ctx):
+        if ctx.author.guild_permissions.administrator:
+            return True
+        return MUSIC_USER_ROLE_ID in [r.id for r in ctx.author.roles]
+    return commands.check(predicate)

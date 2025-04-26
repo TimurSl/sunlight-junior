@@ -3,6 +3,7 @@ import os
 
 import discord
 
+from common.checks.permission_checks import is_music_user
 from useful import get_pwd
 
 MIXES_DIR = os.path.join(get_pwd(), "data", "music", "mixes")
@@ -17,6 +18,7 @@ class SaveMix(commands.Cog):
         self.controller = controller
 
     @app_commands.command(name="savemix", description="Save the current queue as a mix for this server")
+    @is_music_user()
     async def savemix(self, interaction: discord.Interaction):
         if not interaction.response.is_done():
             await interaction.response.defer()
