@@ -110,20 +110,24 @@ class MusicController:
             if rest_entries:
                 asyncio.create_task(self._process_background_tracks(rest_entries, interaction.guild.id))
         else:
-            # Один трек без плейлиста
-            if info.get('_type') == 'url':
-                full_entry = await loop.run_in_executor(None,
-                                                        lambda: self.ytdl.extract_info(info['url'], download=False,process=True))
+            if guild_music.vc.is_playing():
+                # in background
+                soundtrack = asyncio.create_task(self._process_background_tracks([info], interaction.guild.id))
             else:
-                full_entry = info
+                # Один трек без плейлиста
+                if info.get('_type') == 'url':
+                    full_entry = await loop.run_in_executor(None,
+                                                            lambda: self.ytdl.extract_info(info['url'], download=False,process=True))
+                else:
+                    full_entry = info
 
-            stream_url = self.get_any_audio_format(full_entry.get('formats', []))
-            if stream_url:
-                queue.append(TrackInfo(
-                    url=full_entry.get('webpage_url', full_entry.get('url')),
-                    title=full_entry.get('title', full_entry.get('url')),
-                    stream_url=stream_url
-                ))
+                stream_url = self.get_any_audio_format(full_entry.get('formats', []))
+                if stream_url:
+                    queue.append(TrackInfo(
+                        url=full_entry.get('webpage_url', full_entry.get('url')),
+                        title=full_entry.get('title', full_entry.get('url')),
+                        stream_url=stream_url
+                    ))
 
         # 📛 Теперь добавляем проверку на пустую очередь
         if not queue:
@@ -549,9 +553,10 @@ class MusicController:
 
         await asyncio.sleep(0.5)  # (на всякий случай дать остановиться)
 
-        await self._play_current(interaction, ignore_stop=True)
+        await self._play_current(interaction)
         await interaction.followup.send(
             f"⏩ Skipped to track {track_number}: {guild_music.queue[guild_music.current_index].title}")
+        guild_music.skip_flag = False
 
     async def loadmix(self, interaction: discord.Interaction):
         if not interaction.response.is_done():
@@ -630,9 +635,9 @@ class LoadMixPromptView(ui.View):
 
     @ui.button(label="❌ No", style=discord.ButtonStyle.danger)
     async def no_mix(self, interaction: discord.Interaction, button: ui.Button):
+        await interaction.response.edit_message(view=None)  # Удаляем кнопки после ответа
         await interaction.response.send_message("❌ Mix load canceled.", ephemeral=True)
         self.stop()
-        interaction.response.edit_message(view=None)  # Удаляем кнопки после ответа
 
 
 
