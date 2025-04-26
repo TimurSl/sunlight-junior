@@ -21,4 +21,4 @@ DISCORD_AI_USER_ROLE_ID=
 
 # Notes
 - This bot was written for Sunlight Studios server, so any "unneccessary" functionality is needed for server
-- You can modify code whatever you want, but dont sell it
+- You can modify code whatever you want
