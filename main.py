@@ -20,6 +20,16 @@ from commands.music.pause import PauseCog
 from commands.music.queue import QueueCog
 from commands.music.random import RandomCog
 from commands.music.loopqueue import LoopQueueCog
+from commands.music.search import Search
+from commands.music.fav import Fav
+from commands.music.nowplaying import NowPlaying
+from commands.music.radio import Radio
+from commands.music.skipto import SkipTo
+from commands.music.loadfav import LoadFav
+from commands.music.loadmix import LoadMix
+from commands.music.savemix import SaveMix
+
+
 from music.controller import MusicController
 
 
@@ -53,6 +63,15 @@ class CustomBot(commands.Bot):
         await bot.add_cog(QueueCog(bot, controller))
         await bot.add_cog(RandomCog(bot, controller))
         await bot.add_cog(LoopQueueCog(bot, controller))
+        await bot.add_cog(Search(bot, controller))
+        await bot.add_cog(Fav(bot, controller))
+        await bot.add_cog(NowPlaying(bot, controller))
+        await bot.add_cog(Radio(bot, controller))
+        await bot.add_cog(SkipTo(bot, controller))
+        await bot.add_cog(LoadFav(bot, controller))
+        await bot.add_cog(LoadMix(bot, controller))
+        await bot.add_cog(SaveMix(bot, controller))
+
 
         print("Reloaded all modules & synced commands.")
 

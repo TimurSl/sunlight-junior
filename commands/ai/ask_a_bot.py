@@ -7,6 +7,9 @@ from google.genai import types
 
 import os
 from dotenv import load_dotenv
+
+from common.checks.permission_checks import is_ai_user
+
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -19,6 +22,7 @@ class AskAI(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_command(name="ask_professional", description="Ask a professional AI about something")
+    @is_ai_user()
     async def ask_professional(self, ctx: commands.Context, question: str):
         await ctx.defer(ephemeral=False)
 
@@ -34,6 +38,7 @@ class AskAI(commands.Cog):
                 await ctx.send(text[i:i + 2000])
 
     @commands.hybrid_command(name="ask_ena", description="Ask a ENA AI about something")
+    @is_ai_user()
     async def ask_ena(self, ctx: commands.Context, question: str):
         await ctx.defer(ephemeral=False)
 
@@ -49,6 +54,7 @@ class AskAI(commands.Cog):
                 await ctx.send(text[i:i + 2000])
 
     @commands.hybrid_command(name="ask_femboy", description="Ask a Femboy AI about something")
+    @is_ai_user()
     async def ask_femboy(self, ctx: commands.Context, question: str):
         await ctx.defer(ephemeral=False)
 
@@ -64,6 +70,7 @@ class AskAI(commands.Cog):
                 await ctx.send(text[i:i + 2000])
 
     @commands.hybrid_command(name="create_week_summary", description="Create a week summary based on channel messages from this week")
+    @is_ai_user()
     async def create_week_summary(self, ctx: commands.Context, additional_moments: str = None):
         await ctx.defer(ephemeral=False)
 

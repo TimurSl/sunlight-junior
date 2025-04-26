@@ -10,5 +10,6 @@ class PlayCog(commands.Cog):
     @app_commands.command(name="play", description="Plays a YouTube URL or playlist")
     @app_commands.describe(url="The YouTube link to play")
     async def play(self, interaction: discord.Interaction, url: str):
-        await interaction.response.defer()
+        if not interaction.response.is_done():
+            await interaction.response.defer()
         await self.controller.play(interaction, url)
