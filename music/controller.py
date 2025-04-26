@@ -33,6 +33,7 @@ class GuildMusic:
         self.vc = None
         self.skip_flag = False
 
+
 class MusicController:
     YTDL_OPTIONS = {
         'format': 'bestaudio/best',
@@ -112,7 +113,7 @@ class MusicController:
         else:
             if guild_music.vc.is_playing():
                 # in background
-                soundtrack = asyncio.create_task(self._process_background_tracks([info], interaction.guild.id))
+                soundtrack = asyncio.create_task(self._process_background_tracks([info], interaction.guild.id, interaction))
             else:
                 # Один трек без плейлиста
                 if info.get('_type') == 'url':
@@ -129,14 +130,7 @@ class MusicController:
                         stream_url=stream_url
                     ))
 
-        # 📛 Теперь добавляем проверку на пустую очередь
         if not queue:
-            if "music.youtube.com" in url:
-                await interaction.followup.send(
-                    "❌ YouTube Music is not supported or no valid tracks found, skipping...")
-            # elif "youtube.com/playlist" in url:
-            #     await interaction.followup.send(
-            #         "😭 I dont like playlist, they make me sad, skipping...")
             return
 
         # 🚀 Если всё ок, продолжаем
@@ -155,7 +149,7 @@ class MusicController:
         state = "enabled" if guild_music.loop_queue else "disabled"
         await interaction.followup.send(f"Loop Queue {state}")
 
-    async def _process_background_tracks(self, entries, guild_id):
+    async def _process_background_tracks(self, entries, guild_id, interaction=None):
         guild_music = self.get_guild_music(guild_id)
 
         loop = asyncio.get_event_loop()
@@ -176,6 +170,9 @@ class MusicController:
                 ))
 
             await asyncio.sleep(0.1)
+
+        if interaction:
+            await interaction.followup.send(f"Added {len(entries)} track(s) to the queue.")
 
     def get_any_audio_format(self, formats):
         for f in formats:
@@ -204,7 +201,18 @@ class MusicController:
 
         guild_music.vc.play(source, after=after_play)
 
-        embed = discord.Embed(title="Now Playing", description=track.title)
+        # load up track image link
+        if track.url.startswith("https://www.youtube.com/watch?v="):
+            video_id = track.url.split("v=")[-1]
+            thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+        else:
+            thumbnail_url = None
+        # send embed with thumbnail
+
+        track_title_with_url = f"[{track.title}]({track.url})"
+        embed = discord.Embed(title="Now Playing", description=track_title_with_url)
+        if thumbnail_url:
+            embed.set_image(url=thumbnail_url)
         view = PlayerView(self)
         await interaction.followup.send(embed=embed, view=view)
 
@@ -214,35 +222,7 @@ class MusicController:
             guild_music.skip_flag = False
             return
 
-        if getattr(guild_music, 'radio_mode', False) and guild_music.current_index + 1 >= len(guild_music.queue):
-            # Если очередь пустая, подбираем новый трек на основе последнего
-            last_track = guild_music.queue[guild_music.current_index]
-            words = last_track.title.split()
-            if len(words) >= 2:
-                search_query = f"{words[0]} {words[1]}"
-            elif words:
-                search_query = words[0]
-            else:
-                search_query = "music"
-            await self.search(interaction, search_query)  # ищем похожий трек
-            return
-        elif getattr(guild_music, 'random_mode', False):
-            next_track = random.randint(0, len(guild_music.queue) - 1)
-            while next_track == guild_music.current_index:
-                next_track = random.randint(0, len(guild_music.queue) - 1)
-            else:
-                guild_music.current_index = next_track
-        elif guild_music.current_index + 1 < len(guild_music.queue):
-            guild_music.current_index += 1
-        else:
-            if getattr(guild_music, 'loop_queue', False):
-                guild_music.current_index = 0
-            elif guild_music.loop247:
-                random.shuffle(guild_music.queue)
-                guild_music.current_index = 0
-            else:
-                return
-        await self._play_current(interaction)
+        await self.advance_track(guild_music, interaction, direction=1)
 
     async def stop(self, interaction: discord.Interaction):
         guild = interaction.guild or interaction.user.guild
@@ -269,56 +249,59 @@ class MusicController:
 
     async def next(self, interaction: discord.Interaction):
         guild = interaction.guild or interaction.user.guild
-
         guild_music = self.get_guild_music(guild.id)
-        if getattr(guild_music, 'random_mode', False):
-            new_track = random.randint(0, len(guild_music.queue) - 1)
-            while new_track == guild_music.current_index:
-                new_track = random.randint(0, len(guild_music.queue) - 1)
-            else:
-                guild_music.current_index = new_track
-
-        elif guild_music.current_index + 1 < len(guild_music.queue):
-            guild_music.current_index += 1
-        else:
-            if getattr(guild_music, 'loop_queue', False):
-                guild_music.current_index = 0
-            elif guild_music.loop247:
-                random.shuffle(guild_music.queue)
-                guild_music.current_index = 0
-            else:
-                return
-
-        guild_music.skip_flag = True
-        guild_music.vc.stop()
-        await asyncio.sleep(0.5)
-        await self._play_current(interaction)
+        await self.advance_track(guild_music, interaction, direction=1)
 
     async def previous(self, interaction: discord.Interaction):
         guild = interaction.guild or interaction.user.guild
-
         guild_music = self.get_guild_music(guild.id)
-        if getattr(guild_music, 'random_mode', False):
-            next_track = random.randint(0, len(guild_music.queue) - 1)
-            while next_track == guild_music.current_index:
-                next_track = random.randint(0, len(guild_music.queue) - 1)
-            else:
-                guild_music.current_index = next_track
+        await self.advance_track(guild_music, interaction, direction=-1)
 
-        elif guild_music.current_index - 1 >= 0:
-            guild_music.current_index -= 1
-        else:
-            if getattr(guild_music, 'loop_queue', False):
-                guild_music.current_index = 0
+    async def advance_track(self, guild_music, interaction, direction: int = 1):
+        mode_used = ""
+        if direction == 1:
+            if guild_music.current_index + 1 >= len(guild_music.queue):
+                if guild_music.loop247:
+                    mode_used = "Loop 24/7 (Shuffle all track and start from 1)"
+                    random.shuffle(guild_music.queue)
+                    guild_music.current_index = 0
+                elif guild_music.loop_queue:
+                    mode_used = "Loop Queue (Repeat all tracks)"
+                    guild_music.current_index = 0
+                elif guild_music.random_mode:
+                    mode_used = "Random"
+                    guild_music.current_index = random.randint(0, len(guild_music.queue) - 1)
+                else:
+                    mode_used = "End of Queue (Stop playback)"
+                    await interaction.followup.send("Queue ended.")
+                    return
+            else:
+                guild_music.current_index = random.randint(0, len(guild_music.queue) - 1) if guild_music.random_mode else guild_music.current_index + 1
+                mode_used = "Next Track" if not guild_music.random_mode else "Random Track"
+        elif direction == -1:
+            if guild_music.random_mode:
+                mode_used = "Random Track"
+                guild_music.current_index = random.randint(0, len(guild_music.queue) - 1)
+            elif guild_music.loop_queue:
+                mode_used = "Loop Queue (Repeat all tracks)"
+                guild_music.current_index = len(guild_music.queue) - 1 if guild_music.current_index == 0 else guild_music.current_index - 1
             elif guild_music.loop247:
-                random.shuffle(guild_music.queue)
+                mode_used = "Loop 24/7 (Shuffle all track and start from 1)"
+                if guild_music.current_index == 0:
+                    random.shuffle(guild_music.queue)
                 guild_music.current_index = 0
             else:
-                return
+                if guild_music.current_index > 0:
+                    mode_used = "Previous Track"
+                    guild_music.current_index -= 1
+                else:
+                    mode_used = "First Track"
+                    guild_music.current_index = 0  # Stay at 0 if nothing else
 
         guild_music.skip_flag = True
         guild_music.vc.stop()
         await asyncio.sleep(0.5)
+        await interaction.followup.send(f"⏩ {mode_used}: {guild_music.queue[guild_music.current_index].title}")
         await self._play_current(interaction)
 
     async def toggle_247(self, interaction: discord.Interaction):
@@ -344,11 +327,20 @@ class MusicController:
 
         lines = []
         for idx, track in enumerate(guild_music.queue):
-            prefix = '▶️' if idx == guild_music.current_index else f'{idx + 1}.'
+            prefix = f'▶️ {idx + 1}.' if idx == guild_music.current_index else f'{idx + 1}.'
             lines.append(f"{prefix} {track.title}")
 
         msg = "\n".join(lines)
-        await interaction.followup.send(f"**Current Queue:**\n{msg}")
+
+        if len(msg) > 1900:
+            chunks = [msg[i:i + 1900] for i in range(0, len(msg), 1900)]
+
+            await interaction.followup.send("**Current Queue:**")  # Заголовок один раз
+
+            for chunk in chunks:
+                await interaction.followup.send(chunk)  # Просто куски текста
+        else:
+            await interaction.followup.send(f"**Current Queue:**\n{msg}")
 
     async def search(self, interaction: discord.Interaction, query: str):
         guild_music = self.get_guild_music(interaction.guild.id)
@@ -516,16 +508,17 @@ class MusicController:
             return
 
         track = guild_music.queue[guild_music.current_index]
+        track_thumbnail = None
+        if track.url.startswith("https://www.youtube.com/watch?v="):
+            video_id = track.url.split("v=")[-1]
+            track_thumbnail = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
 
         embed = discord.Embed(title="Now Playing 🎶", description=f"[{track.title}]({track.url})",
                               color=discord.Color.blurple())
-        await interaction.followup.send(embed=embed)
+        if track_thumbnail:
+            embed.set_image(url=track_thumbnail)
 
-    async def toggle_radio(self, interaction: discord.Interaction):
-        guild_music = self.get_guild_music(interaction.guild.id)
-        guild_music.radio_mode = not getattr(guild_music, 'radio_mode', False)
-        state = "enabled" if guild_music.radio_mode else "disabled"
-        await interaction.followup.send(f"📻 Radio mode {state}.", ephemeral=True)
+        await interaction.followup.send(embed=embed)
 
     async def skipto(self, interaction: discord.Interaction, track_number: int):
         if not interaction.response.is_done():
@@ -685,6 +678,8 @@ class FavDropdown(discord.ui.Select):
 
 
     async def callback(self, interaction_select: discord.Interaction):
+        guild_music = self.controller.get_guild_music(interaction_select.guild.id)
+
         selected = self.values[0]
         if self.mode == "load":
             if selected == "➕ Add All":
@@ -718,6 +713,10 @@ class FavDropdown(discord.ui.Select):
                     else:
                         await interaction_select.response.send_message("❌ Favorite song not found.", ephemeral=True)
 
+        if not guild_music.vc.is_playing() and not guild_music.vc.is_paused():
+            self.controller.skip_flag = True
+            self.controller.bot.loop.create_task(self.controller._play_current(interaction_select))
+
     async def self_add(self, fav, interaction_select):
         guild_music = self.controller.get_guild_music(interaction_select.guild.id)
 
@@ -732,5 +731,3 @@ class FavDropdown(discord.ui.Select):
             )
         )
 
-        if not guild_music.vc.is_playing() and not guild_music.vc.is_paused():
-            self.controller.bot.loop.create_task(self.controller._play_current(interaction_select))

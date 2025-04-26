@@ -1,12 +1,18 @@
-﻿import datetime
+﻿import asyncio
+import datetime
+from io import BytesIO
 
 import discord
 from discord.ext import commands
 from google import genai
 from google.genai import types
 
+from PIL import Image
+from io import BytesIO
+
 import os
 from dotenv import load_dotenv
+from useful import get_pwd
 
 from common.checks.permission_checks import is_ai_user
 
@@ -68,6 +74,32 @@ class AskAI(commands.Cog):
             text = response.text
             for i in range(0, len(text), 2000):
                 await ctx.send(text[i:i + 2000])
+
+    @commands.hybrid_command(name="generate_image", description="Generate an image based on a prompt")
+    @is_ai_user()
+    async def generate_image(self, ctx: commands.Context, prompt: str):
+        await ctx.defer(ephemeral=False)
+
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-exp-image-generation",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_modalities=['TEXT', 'IMAGE']
+            )
+        )
+
+        for part in response.candidates[0].content.parts:
+            if part.text is not None:
+                await ctx.send(part.text)
+            elif part.inline_data is not None:
+                image = Image.open(BytesIO((part.inline_data.data)))
+                random_uuid = os.urandom(16).hex()
+                path = os.path.join(get_pwd(), "data", "ai", "images")
+                os.makedirs(path, exist_ok=True)
+                image.save(os.path.join(path, f"generated_image_{random_uuid}.png"))
+                await ctx.send(file=discord.File(os.path.join(path, f"generated_image_{random_uuid}.png")))
+                os.remove(os.path.join(path, f"generated_image_{random_uuid}.png"))
+
 
     @commands.hybrid_command(name="create_week_summary", description="Create a week summary based on channel messages from this week")
     @is_ai_user()

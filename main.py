@@ -23,7 +23,6 @@ from commands.music.loopqueue import LoopQueueCog
 from commands.music.search import Search
 from commands.music.fav import Fav
 from commands.music.nowplaying import NowPlaying
-from commands.music.radio import Radio
 from commands.music.skipto import SkipTo
 from commands.music.loadfav import LoadFav
 from commands.music.loadmix import LoadMix
@@ -67,7 +66,6 @@ class CustomBot(commands.Bot):
         await bot.add_cog(Search(bot, controller))
         await bot.add_cog(Fav(bot, controller))
         await bot.add_cog(NowPlaying(bot, controller))
-        await bot.add_cog(Radio(bot, controller))
         await bot.add_cog(SkipTo(bot, controller))
         await bot.add_cog(LoadFav(bot, controller))
         await bot.add_cog(LoadMix(bot, controller))

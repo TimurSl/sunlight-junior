@@ -7,3 +7,4 @@ google-genai
 yt-dlp
 PyNaCl
 ffmpeg
+pillow
