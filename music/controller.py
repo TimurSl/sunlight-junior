@@ -147,7 +147,7 @@ class MusicController:
         guild_music = self.get_guild_music(guild.id)
         guild_music.loop_queue = not getattr(guild_music, 'loop_queue', False)
         state = "enabled" if guild_music.loop_queue else "disabled"
-        await interaction.followup.send(f"Loop Queue {state}")
+        await interaction.followup.send(f"Loop Queue {state}\n\n*(After the end of the queue, it will repeat all tracks.)*")
 
     async def _process_background_tracks(self, entries, guild_id, interaction=None):
         guild_music = self.get_guild_music(guild_id)
@@ -181,12 +181,14 @@ class MusicController:
         return None
 
     async def _play_current(self, interaction: discord.Interaction, ignore_stop=False):
-        if not interaction.user.voice or not interaction.user.voice.channel:
-            await interaction.followup.send("You're not in a voice channel.")
-            return
         guild = interaction.guild or interaction.user.guild
-
         guild_music = self.get_guild_music(guild.id)
+
+        if not interaction.user.voice or not interaction.user.voice.channel:
+            if not guild_music.loop247: # if 24/7 disabled dont play
+                await interaction.followup.send("You're not in a voice channel.")
+                return
+
         track = guild_music.queue[guild_music.current_index]
 
         if guild_music.vc.is_playing() or guild_music.vc.is_paused():
@@ -214,7 +216,15 @@ class MusicController:
         if thumbnail_url:
             embed.set_image(url=thumbnail_url)
         view = PlayerView(self)
-        await interaction.followup.send(embed=embed, view=view)
+
+        # if user is not in voice just dont send the embed
+        if interaction.user.voice is None:
+            if not guild_music.loop247:
+                await guild_music.vc.disconnect(force=True)
+                return  # выходим из функции, чтобы дальше код не шёл
+            # если 24/7 включен — просто пропускаем отправку embed
+        else:
+            await interaction.followup.send(embed=embed, view=view)
 
     async def _after_track(self, interaction: discord.Interaction):
         guild_music = self.get_guild_music(interaction.guild.id)
@@ -222,7 +232,7 @@ class MusicController:
             guild_music.skip_flag = False
             return
 
-        await self.advance_track(guild_music, interaction, direction=1)
+        await self.advance_track(guild_music, interaction, direction=1, after_track_next=True)
 
     async def stop(self, interaction: discord.Interaction):
         guild = interaction.guild or interaction.user.guild
@@ -257,7 +267,7 @@ class MusicController:
         guild_music = self.get_guild_music(guild.id)
         await self.advance_track(guild_music, interaction, direction=-1)
 
-    async def advance_track(self, guild_music, interaction, direction: int = 1):
+    async def advance_track(self, guild_music, interaction, direction: int = 1, after_track_next=False):
         mode_used = ""
         if direction == 1:
             if guild_music.current_index + 1 >= len(guild_music.queue):
@@ -298,24 +308,25 @@ class MusicController:
                     mode_used = "First Track"
                     guild_music.current_index = 0  # Stay at 0 if nothing else
 
-        guild_music.skip_flag = True
+        guild_music.skip_flag = not after_track_next
         guild_music.vc.stop()
         await asyncio.sleep(0.5)
-        await interaction.followup.send(f"⏩ {mode_used}: {guild_music.queue[guild_music.current_index].title}")
+        if interaction.user.voice is not None:
+            await interaction.followup.send(f"⏩ {mode_used}: {guild_music.queue[guild_music.current_index].title}")
         await self._play_current(interaction)
 
     async def toggle_247(self, interaction: discord.Interaction):
         guild_music = self.get_guild_music(interaction.guild.id)
         guild_music.loop247 = not guild_music.loop247
         state = "enabled" if guild_music.loop247 else "disabled"
-        await interaction.followup.send(f"24/7 mode {state}")
+        await interaction.followup.send(f"24/7 mode {state}\n\n*(After the end of the queue, it will shuffle all tracks and start from the first one. (btw the bot wont leave voice after end of track if youre not in voice channel))*")
 
     # New: Shuffle the entire queue and restart playback
     async def shuffle(self, interaction: discord.Interaction):
         guild_music = self.get_guild_music(interaction.guild.id)
         guild_music.random_mode = not getattr(guild_music, 'random_mode', False)
         state = "enabled" if guild_music.random_mode else "disabled"
-        await interaction.followup.send(f"Random mode {state}")
+        await interaction.followup.send(f"Random mode {state}\n\n*(Every next track will be randomly selected from the queue.)*")
 
     # New: Show full queue list
     async def show_queue(self, interaction: discord.Interaction):
