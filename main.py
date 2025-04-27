@@ -3,11 +3,9 @@ from dotenv import load_dotenv
 import discord
 from discord.ext import commands
 
-from cogs.Notifier import Notifier
 from commands.useful.chat_cleaner import ChatCleaner
 from commands.fun.random_picture import RandomPicture
 from commands.ai.ask_a_bot import AskAI
-from cogs.voice_rooms import VoiceRooms
 from cogs.stats import ServerStats
 
 
@@ -25,13 +23,10 @@ intents.message_content = True
 class CustomBot(commands.Bot):
     async def setup_hook(self):
 
-        await bot.add_cog(Notifier(bot))
         await bot.add_cog(ChatCleaner(bot))
         await bot.add_cog(RandomPicture(bot))
         await bot.add_cog(AskAI(bot))
-        await bot.add_cog(VoiceRooms(bot))
         await bot.add_cog(ServerStats(bot))
-
 
         print("Reloaded all modules & synced commands.")
 
