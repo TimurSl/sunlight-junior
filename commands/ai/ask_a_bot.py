@@ -122,15 +122,18 @@ class AskAI(commands.Cog):
         week_messages = [msg for msg in messages if start_of_week <= msg.created_at <= end_of_week]
         concatenated_text = "\n".join(msg.content for msg in week_messages if msg.content)
         full_prompt = (
-            "You are an AI specialized in summarizing weekly activity into a changelog format.\n\n"
+            "You are an AI specialized in summarizing weekly activity into a structured changelog format.\n\n"
             "Task:\n"
             "- Input will be a full text log of messages from the entire week, in multiple languages.\n"
             "- Translate everything into English.\n"
-            "- Ignore and delete all personal or irrelevant messages (e.g., 'I got sick', 'brb', 'good night', 'how are you', 'helped someone', *Any Name*).\n"
+            "- Ignore and delete all personal or irrelevant messages (e.g., 'I got sick', 'brb', 'good night', 'how are you', 'helped someone', Any Name).\n"
             "- Focus only on meaningful changes, updates, actions, or events.\n"
-            "- Summarize all important moments and group them logically if possible.\n"
-            "- Format the output as a clean Markdown bullet list (-) with short, clear points.\n"
-            "- Each bullet point should briefly describe the change, achievement, or event.\n"
+            "- Summarize all important moments and group them logically.\n"
+            "- Format the output with the following structure:\n"
+            "  - Our progress:\n"
+            "    - Changes:\n"
+            "      - [List of changes as bullet points]\n"
+            "- Each bullet point should briefly describe the change, achievement, or event in past tense.\n"
             "- Keep the summary compact and efficient.\n\n"
             "Additional Rules:\n"
             "- No personal details, no idle chatter.\n"
