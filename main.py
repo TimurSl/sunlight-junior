@@ -6,7 +6,6 @@ from discord.ext import commands
 from commands.useful.chat_cleaner import ChatCleaner
 from commands.fun.random_picture import RandomPicture
 from commands.ai.ask_a_bot import AskAI
-from cogs.stats import ServerStats
 
 
 
@@ -26,7 +25,6 @@ class CustomBot(commands.Bot):
         await bot.add_cog(ChatCleaner(bot))
         await bot.add_cog(RandomPicture(bot))
         await bot.add_cog(AskAI(bot))
-        await bot.add_cog(ServerStats(bot))
 
         print("Reloaded all modules & synced commands.")
 
