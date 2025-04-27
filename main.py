@@ -7,34 +7,8 @@ from cogs.Notifier import Notifier
 from commands.useful.chat_cleaner import ChatCleaner
 from commands.fun.random_picture import RandomPicture
 from commands.ai.ask_a_bot import AskAI
-
-from commands.music.join import JoinCog
-from commands.music.leave import LeaveCog
-from commands.music.play import PlayCog
-from commands.music.loop import Loop247Cog
-from commands.music.next import NextCog
-from commands.music.stop import StopCog
-from commands.music.previous import PreviousCog
-from commands.music.pause import PauseCog
-from commands.music.queue import QueueCog
-from commands.music.random import RandomCog
-from commands.music.loopqueue import LoopQueueCog
-from commands.music.search import Search
-from commands.music.fav import Fav
-from commands.music.nowplaying import NowPlaying
-from commands.music.skipto import SkipTo
-from commands.music.loadfav import LoadFav
-from commands.music.loadmix import LoadMix
-from commands.music.savemix import SaveMix
-from commands.music.removetrack import RemoveTrack
-from commands.music.forcejoin import ForceJoinCog
-from commands.music.forceleave import ForceLeaveCog
-
-from music.controller import MusicController
-
 from cogs.voice_rooms import VoiceRooms
 from cogs.stats import ServerStats
-from cogs.configure import Configurator
 
 
 
@@ -50,37 +24,13 @@ intents.message_content = True
 
 class CustomBot(commands.Bot):
     async def setup_hook(self):
-        controller = MusicController(bot)
 
         await bot.add_cog(Notifier(bot))
         await bot.add_cog(ChatCleaner(bot))
         await bot.add_cog(RandomPicture(bot))
         await bot.add_cog(AskAI(bot))
-
-        await bot.add_cog(JoinCog(bot, controller))
-        await bot.add_cog(PlayCog(bot, controller))
-        await bot.add_cog(StopCog(bot, controller))
-        await bot.add_cog(PauseCog(bot, controller))
-        await bot.add_cog(NextCog(bot, controller))
-        await bot.add_cog(PreviousCog(bot, controller))
-        await bot.add_cog(Loop247Cog(bot, controller))
-        await bot.add_cog(LeaveCog(bot, controller))
-        await bot.add_cog(QueueCog(bot, controller))
-        await bot.add_cog(RandomCog(bot, controller))
-        await bot.add_cog(LoopQueueCog(bot, controller))
-        await bot.add_cog(Search(bot, controller))
-        await bot.add_cog(Fav(bot, controller))
-        await bot.add_cog(NowPlaying(bot, controller))
-        await bot.add_cog(SkipTo(bot, controller))
-        await bot.add_cog(LoadFav(bot, controller))
-        await bot.add_cog(LoadMix(bot, controller))
-        await bot.add_cog(SaveMix(bot, controller))
-        await bot.add_cog(RemoveTrack(bot, controller))
-        await bot.add_cog(ForceJoinCog(bot, controller))
-        await bot.add_cog(ForceLeaveCog(bot, controller))
         await bot.add_cog(VoiceRooms(bot))
         await bot.add_cog(ServerStats(bot))
-        await bot.add_cog(Configurator(bot))
 
 
         print("Reloaded all modules & synced commands.")
