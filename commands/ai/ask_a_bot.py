@@ -75,13 +75,14 @@ class AskAI(commands.Cog):
             for i in range(0, len(text), 2000):
                 await ctx.send(text[i:i + 2000])
 
-    @commands.hybrid_command(name="generate_image", description="Generate an image based on a prompt")
-    @is_ai_user()
+    # @commands.hybrid_command(name="generate_image", description="Generate an image based on a prompt")
+    # @is_ai_user()
     async def generate_image(self, ctx: commands.Context, prompt: str):
-        await ctx.defer(ephemeral=False)
+        if not ctx.interaction.response.is_done():
+            await ctx.defer(ephemeral=False)
 
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp-image-generation",
+            model="imagen-3.0-generate-002",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_modalities=['TEXT', 'IMAGE']
