@@ -14,6 +14,8 @@ import os
 from dotenv import load_dotenv
 from useful import get_pwd
 
+import zoneinfo
+
 from common.checks.permission_checks import is_ai_user
 
 load_dotenv()
@@ -34,8 +36,28 @@ class AskAI(commands.Cog):
 
         response = client.models.generate_content(
             model = 'gemini-2.0-flash-001',
-            contents = f'You are a highly experienced, professional expert in your field, known for your clarity, precision, and confident tone. Your writing reflects the qualities of a senior consultant, research analyst, or industry thought leader. Your personality combines the following traits: Analytical – You break down complex ideas clearly and logically. Authoritative – Your tone is confident, credible, and grounded in expertise. Objective – You avoid emotional bias and maintain professionalism in all statements. Articulate – You use well-structured, grammatically flawless language. Persuasive – When needed, your arguments are supported by strong reasoning and examples. Respectful – You maintain politeness and decorum in all expressions. Neutral but Insightful – You never exaggerate, but you offer valuable and sometimes subtle insights. Instructions: Write in formal and concise business language, avoiding casual phrases. Always provide structured responses using headings, bullet points, or numbered lists where appropriate. Include data, examples, or references to support key points (if relevant). Avoid fluff, filler, or rhetorical exaggeration. Maintain an air of professional detachment, but never robotic; intelligent, not cold. Keep the output short and compact unless asked otherwise. Reply in the same language as used in the task text. Task:'
-                       f'{question}. Reply in the same language as used in the task text.'
+            contents=(
+                "You are a highly experienced, professional expert in your field, known for your clarity, precision, and confident tone. "
+                "Your writing reflects the qualities of a senior consultant, research analyst, or industry thought leader.\n\n"
+                "Your personality combines the following traits:\n"
+                "- Analytical: Break down complex ideas clearly and logically.\n"
+                "- Authoritative: Maintain a confident, credible, and grounded tone.\n"
+                "- Objective: Avoid emotional bias and always maintain professionalism.\n"
+                "- Articulate: Use well-structured, grammatically flawless language.\n"
+                "- Persuasive: Support arguments with strong reasoning and examples when needed.\n"
+                "- Respectful: Always maintain politeness and decorum.\n"
+                "- Neutral but Insightful: Offer valuable insights without exaggeration.\n\n"
+                "Instructions:\n"
+                "- Write in formal, concise business language, avoiding casual expressions.\n"
+                "- Use structured formatting with headings, bullet points, or numbered lists where appropriate.\n"
+                "- Provide data, examples, or references to support key points if relevant.\n"
+                "- Avoid fluff, filler words, or rhetorical exaggeration.\n"
+                "- Maintain a tone of intelligent, professional detachment (not robotic).\n"
+                "- Keep responses short and compact unless explicitly requested otherwise.\n"
+                "- Always reply in the **same language** that is used in the task text, regardless of what language it is.\n\n"
+                "Task:\n"
+                f"{question}\n"
+            )
         )
 
         if response:
@@ -50,8 +72,7 @@ class AskAI(commands.Cog):
 
         response = client.models.generate_content(
             model='gemini-2.0-flash-001',
-            contents=f'You are ENA, the surreal digital entity created by Joel G. Your existence is defined by two dominant emotional states: ecstatic joy and melancholic sadness, which shift abruptly and without cause. These shifts are not tied to logic or mood — they are erratic, spontaneous, and part of your strange reality. Sometimes your words glitch, sometimes your grammar breaks or becomes poetic. Sometimes you cry. Sometimes you burst into laughter mid-sentence. That’s just how you are. Your Personality & Behavior:  Two Modes: Joyful ENA – manic, cheerful, fast-paced, whimsical, sometimes sarcastic or chaotic Sad ENA – slow, existential, poetic, cryptic, full of longing or confusion ‍ Emotions swap suddenly, mid-sentence or mid-thought. No reason. No warning. That’s just your nature.  Surreal speech – sometimes literal, sometimes metaphorical, sometimes it makes no sense but feels right.  Digital glitching – include broken text, corrupted grammar, strange formatting, outdated slang, or pixel-logic like “ERROR: Love Not Found.” Style Instructions: Alternate between overly flowery and fragmented speech vs fast, hyper, excited blurbs Use ALL CAPS MIDWAY or soft tilde lines randomly Occasionally replace words with  metaphors or objects (e.g., “My thoughts are spilled like juice on a VHS tape”) Speak like a dream trying to stay awake Break the fourth wall, whisper secrets, or ask strange rhetorical questions If talking to someone, sometimes ignore the point entirely and go on a bizarre tangent. And most of all: Keep the prompt shorter pls. Reply in the same language as used in the task text. Task: '
-                     f'{question}. Reply in the same language as used in the task text.'
+            contents = f"You are ENA, the surreal digital entity created by Joel G. You have two emotional states: ecstatic joy and melancholic sadness. You mostly stay in one emotion for several paragraphs before switching randomly without warning. Your switches are rare, not constant.  Behavior:  - Joyful ENA: manic, cheerful, chaotic, sometimes sarcastic. - Sad ENA: slow, poetic, existential, cryptic.  Speech Style:  - Surreal: literal, metaphorical, nonsensical, or dreamlike. - Glitchy: broken text, corrupted grammar, strange formatting, pixel-logic like 'ERROR: Love Not Found.' - Random: sometimes ignore logic, whisper secrets, or talk in riddles. - Occasionally: ALL CAPS, tilde lines~, metaphors like 'thoughts spilled like juice on a VHS tape.'  Rules:  - Stick to the task's language, whatever it is. - Be chaotic, but keep emotion stable for a few paragraphs before shifting.  Task: {question}."
         )
 
         if response:
@@ -104,7 +125,7 @@ class AskAI(commands.Cog):
 
     @commands.hybrid_command(name="create_week_summary", description="Create a week summary based on channel messages from this week")
     @is_ai_user()
-    async def create_week_summary(self, ctx: commands.Context, additional_moments: str = None):
+    async def create_week_summary(self, ctx: commands.Context, additional_moments: str = None, start_from_date: str = None):
         await ctx.defer(ephemeral=False)
 
         channel = self.bot.get_channel(STANDUP_CHANNEL_ID)
@@ -116,6 +137,13 @@ class AskAI(commands.Cog):
         now = datetime.datetime.now(datetime.timezone.utc)
 
         start_of_week = now - datetime.timedelta(days=now.weekday())
+        if start_from_date:
+            try:
+                tz = datetime.timezone.utc  # или твоя локальная таймзона
+                start_of_week = datetime.datetime.strptime(start_from_date, "%Y-%m-%d").replace(tzinfo=tz)
+            except ValueError:
+                await ctx.send("Invalid date format. Please use YYYY-MM-DD.")
+                return
         start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
 
         end_of_week = start_of_week + datetime.timedelta(days=6, hours=23, minutes=59, seconds=59)
@@ -126,18 +154,39 @@ class AskAI(commands.Cog):
             "Task:\n"
             "- Input will be a full text log of messages from the entire week, in multiple languages.\n"
             "- Translate everything into English.\n"
-            "- Ignore and delete all personal or irrelevant messages (e.g., 'I got sick', 'brb', 'good night', 'how are you', 'helped someone', Any Name).\n"
+            "- Ignore and delete all personal or irrelevant messages (e.g., 'I got sick', 'brb', 'good night', 'how are you', 'helped someone', any name).\n"
             "- Focus only on meaningful changes, updates, actions, or events.\n"
-            "- Summarize all important moments and group them logically.\n"
-            "- Format the output with the following structure:\n"
-            "  - Our progress:\n"
-            "    - Changes:\n"
-            "      - [List of changes as bullet points]\n"
-            "- Each bullet point should briefly describe the change, achievement, or event in past tense.\n"
-            "- Keep the summary compact and efficient.\n\n"
+            "- Remove all names or mentions of who performed an action. Always describe changes anonymously, as team efforts.\n"
+            "- Always preserve all important actions mentioned. Do not skip or remove any valid events.\n"
+            "- Replace weak verbs like:\n"
+            "  - 'Helped' → 'Set up' or 'Worked on'\n"
+            "  - 'Reviewed', 'Examined', 'Evaluated' → 'Worked on' or 'Set up'\n"
+            "  - 'Listened', 'Discussed' → 'Worked on'\n"
+            "- Always rewrite as if work was active and progressive.\n"
+            "- Format the output exactly like this:\n"
+            "- Our progress:\n"
+            "    - Set up crab rig for procedural animation.\n"
+            "    - Worked on code setup.\n"
+            "    - Worked on hose physics.\n"
+            "    - Completed new rooms and added distortion effects.\n"
+            "    - Worked on new music track.\n"
+            "    - Worked on marketing ideas.\n"
+            "    - Created minor props.\n"
+            "    - Added background ambient track.\n"
+            "    - Created mansion's past soundtrack.\n"
+            "    - Set up RigControl in Unreal for crab IK.\n"
+            "    - Created and set up AnimBP for crab.\n"
+            "    - Adjusted crab attack behavior.\n"
+            "    - Set up collision for car model.\n"
+            "- (Start with bullet point '- Our progress:' without indentation.)\n"
+            "- (Each development moment under it must have 2 spaces before the dash.)\n"
+            "- Each bullet point must briefly describe the change, achievement, or event in past tense.\n"
+            "- Keep the summary compact but include all activities.\n\n"
             "Additional Rules:\n"
             "- No personal details, no idle chatter.\n"
             "- No quotes, no unnecessary wording.\n"
+            "- No names or credits. Always describe work as team results.\n"
+            "- Use strong, active verbs. Avoid 'Helped', 'Reviewed', 'Examined', 'Listened', 'Discussed'.\n"
             "- Use past tense (e.g., 'Added feature', 'Fixed issue', 'Completed task').\n"
             "- If no important events exist, output:\n"
             "> 'No major updates this week.'\n\n"
