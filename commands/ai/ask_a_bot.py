@@ -198,10 +198,32 @@ class AskAI(commands.Cog):
         # cut response into chunks of 2000 characters
         if response:
             text = response.text
-            for i in range(0, len(text), 2000):
-                await ctx.send(text[i:i + 2000])
+            lines = text.split("-")
+            bullets = []
+
+            for line in lines:
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                if stripped.lower().startswith("- Our progress"):
+                    bullets.append(stripped)
+                else:
+                    bullets.append(f"  - {stripped}")
+
+            chunk = ""
+            for bullet in bullets:
+                if len(chunk) + len(bullet) + 1 < 2000:
+                    chunk += bullet + "\n"
+                else:
+                    await ctx.channel.send(chunk.strip())
+                    chunk = bullet + "\n"
+
+            if chunk.strip():
+                await ctx.channel.send(chunk.strip())
         else:
-            await ctx.send("No response from AI.")
+            await ctx.channel.send("No response from AI.")
+
+
 
 
 
