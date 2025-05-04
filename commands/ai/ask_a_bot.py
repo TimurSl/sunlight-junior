@@ -125,10 +125,10 @@ class AskAI(commands.Cog):
 
     @commands.hybrid_command(name="create_week_summary", description="Create a week summary based on channel messages from this week")
     @is_ai_user()
-    async def create_week_summary(self, ctx: commands.Context, additional_moments: str = None, start_from_date: str = None):
+    async def create_week_summary(self, ctx: commands.Context, additional_moments: str = None, start_from_date: str = None, days: int = 7, from_channel: discord.TextChannel = None):
         await ctx.defer(ephemeral=False)
 
-        channel = self.bot.get_channel(STANDUP_CHANNEL_ID)
+        channel = from_channel or ctx.channel
 
         messages = []
         async for msg in channel.history(limit=1000):
@@ -146,7 +146,7 @@ class AskAI(commands.Cog):
                 return
         start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        end_of_week = start_of_week + datetime.timedelta(days=6, hours=23, minutes=59, seconds=59)
+        end_of_week = start_of_week + datetime.timedelta(days=days)
         week_messages = [msg for msg in messages if start_of_week <= msg.created_at <= end_of_week]
         concatenated_text = "\n".join(msg.content for msg in week_messages if msg.content)
         full_prompt = (
@@ -195,7 +195,14 @@ class AskAI(commands.Cog):
             contents=full_prompt
         )
 
-        await ctx.send(response.text)
+        # cut response into chunks of 2000 characters
+        if response:
+            text = response.text
+            for i in range(0, len(text), 2000):
+                await ctx.send(text[i:i + 2000])
+        else:
+            await ctx.send("No response from AI.")
+
 
 
 
