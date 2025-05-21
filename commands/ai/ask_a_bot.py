@@ -158,6 +158,7 @@ class AskAI(commands.Cog):
             "- Focus only on meaningful changes, updates, actions, or events.\n"
             "- Remove all names or mentions of who performed an action. Always describe changes anonymously, as team efforts.\n"
             "- Always preserve all important actions mentioned. Do not skip or remove any valid events.\n"
+            "- Preserve only actions that is working or already done, dont add future plans or \"thinked about some ideas\".\n"
             "- Replace weak verbs like:\n"
             "  - 'Helped' → 'Set up' or 'Worked on'\n"
             "  - 'Reviewed', 'Examined', 'Evaluated' → 'Worked on' or 'Set up'\n"
